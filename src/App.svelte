@@ -11,6 +11,11 @@
   let cameras = []
   let loading = false
   let error = ''
+  let page = 1
+  let total = 0
+  const perPage = 25
+
+  $: totalPages = Math.ceil(total / perPage) || 1
 
   onMount(() => loadPhotos())
 
@@ -21,8 +26,10 @@
       const result = await fetchPhotos({
         sol: sol ?? undefined,
         camera: camera || undefined,
+        page,
       })
       photos = result.photos
+      total = result.total
       // Derive available cameras from results (only when showing all)
       if (!camera) {
         cameras = [...new Set(photos.map(p => p.camera.id))]
@@ -41,6 +48,7 @@
   function handleSol(e) {
     sol = e.detail
     camera = ''
+    page = 1
     loadPhotos()
   }
 
@@ -51,7 +59,16 @@
     } else {
       camera = cameras.find(c => cameraDisplayName(c) === name) || ''
     }
+    page = 1
     loadPhotos()
+  }
+
+  function prevPage() {
+    if (page > 1) { page--; loadPhotos() }
+  }
+
+  function nextPage() {
+    if (page < totalPages) { page++; loadPhotos() }
   }
 </script>
 
@@ -72,6 +89,14 @@
       selected={camera ? cameraDisplayName(camera) : 'All'}
       on:select={handleCamera}
     />
+
+    {#if total > perPage}
+      <div class="pagination">
+        <button disabled={page <= 1} on:click={prevPage}>Prev</button>
+        <span class="page-info">Page {page} of {totalPages} ({total} photos)</span>
+        <button disabled={page >= totalPages} on:click={nextPage}>Next</button>
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -97,6 +122,37 @@
     padding: 16px;
     background: var(--bg-surface);
     border-top: 1px solid var(--bg-control);
+  }
+
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .pagination button {
+    background: var(--bg-control);
+    color: var(--text);
+    border: none;
+    padding: 6px 14px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  .pagination button:hover:not(:disabled) {
+    background: var(--accent);
+  }
+
+  .pagination button:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+
+  .page-info {
+    font-size: 13px;
+    color: var(--text-dim);
   }
 
   .error {
