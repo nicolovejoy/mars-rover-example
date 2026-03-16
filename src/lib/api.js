@@ -1,5 +1,67 @@
-const BASE = 'https://mars.nasa.gov/rss/api/'
+const BASE = '/api/nasa'
 const CACHE_TTL = 5 * 60 * 1000
+const MANIFEST_KEY = 'sol_manifest'
+
+function getManifest() {
+  try {
+    return JSON.parse(localStorage.getItem(MANIFEST_KEY)) || {}
+  } catch {
+    return {}
+  }
+}
+
+function updateManifest(sol, info) {
+  try {
+    const manifest = getManifest()
+    manifest[sol] = info
+    localStorage.setItem(MANIFEST_KEY, JSON.stringify(manifest))
+  } catch {
+    // localStorage full
+  }
+}
+
+export async function fetchLatestSol() {
+  const params = new URLSearchParams({
+    feed: 'raw_images',
+    category: 'mars2020',
+    feedtype: 'json',
+    num: '1',
+  })
+  const res = await fetch(`${BASE}?${params}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  const json = await res.json()
+  const images = json.images || []
+  return {
+    latestSol: images[0]?.sol ?? 0,
+    total: json.total_results || 0,
+  }
+}
+
+export async function fetchSolInfo(sol) {
+  const manifest = getManifest()
+  if (manifest[sol]) return manifest[sol]
+
+  const params = new URLSearchParams({
+    feed: 'raw_images',
+    category: 'mars2020',
+    feedtype: 'json',
+    num: '1',
+    sol: String(sol),
+  })
+  const res = await fetch(`${BASE}?${params}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  const json = await res.json()
+
+  const images = json.images || []
+  const cameras = [...new Set(images.map(i => i.camera?.instrument).filter(Boolean))]
+  const info = { count: json.total_results || 0, cameras }
+  updateManifest(sol, info)
+  return info
+}
+
+export function getCachedSolInfo(sol) {
+  return getManifest()[sol] || null
+}
 
 function getCache(key, maxAgeMs) {
   try {
@@ -48,12 +110,18 @@ export function cameraDisplayName(code) {
   return CAMERA_NAMES[code] || code
 }
 
+function proxyImage(url) {
+  if (!url) return url
+  return `/img?url=${encodeURIComponent(url)}`
+}
+
 function normalizePhoto(item) {
   const code = item.camera?.instrument || 'Unknown'
+  const rawSrc = item.image_files?.medium || item.image_files?.full_res
   return {
     id: item.imageid,
     sol: item.sol,
-    img_src: item.image_files?.medium || item.image_files?.full_res,
+    img_src: proxyImage(rawSrc),
     earth_date: item.date_taken_utc?.split('T')[0] || '',
     camera: {
       id: code,

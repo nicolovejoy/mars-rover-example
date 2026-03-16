@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte'
-  import { fetchPhotos, fetchLegacyPhotos, cameraDisplayName } from './lib/api.js'
+  import { fetchPhotos, fetchLegacyPhotos, fetchLatestSol, fetchSolInfo, getCachedSolInfo, cameraDisplayName } from './lib/api.js'
   import RoverSelector from './components/RoverSelector.svelte'
   import SolSlider from './components/SolSlider.svelte'
   import CameraSelector from './components/CameraSelector.svelte'
@@ -15,18 +15,41 @@
   let error = ''
   let page = 1
   let total = 0
+  let latestSol = 1850
+  let solPhotoCount = null
   const perPage = 25
 
   $: isPerseverance = rover === 'perseverance'
   $: totalPages = Math.ceil(total / perPage) || 1
 
-  onMount(() => load())
+  onMount(async () => {
+    try {
+      const info = await fetchLatestSol()
+      latestSol = info.latestSol
+    } catch {
+      // fall back to default max
+    }
+    load()
+  })
 
   async function load() {
     error = ''
     loading = true
     try {
       if (isPerseverance) {
+        // Check manifest for sol photo count first
+        if (sol != null) {
+          const solInfo = await fetchSolInfo(sol)
+          solPhotoCount = solInfo.count
+          if (solInfo.count === 0) {
+            photos = []
+            total = 0
+            cameras = []
+            loading = false
+            return
+          }
+        }
+
         const result = await fetchPhotos({
           sol: sol ?? undefined,
           camera: camera || undefined,
@@ -39,8 +62,10 @@
         }
         if (sol === null && photos.length > 0) {
           sol = photos[0].sol
+          solPhotoCount = result.total
         }
       } else {
+        solPhotoCount = null
         const result = await fetchLegacyPhotos({ rover, page })
         photos = result.photos
         total = result.total
@@ -57,6 +82,7 @@
     sol = null
     camera = ''
     cameras = []
+    solPhotoCount = null
     page = 1
     load()
   }
@@ -101,7 +127,7 @@
     <RoverSelector selected={rover} on:select={handleRover} />
 
     {#if isPerseverance}
-      <SolSlider value={sol ?? 0} on:change={handleSol} />
+      <SolSlider value={sol ?? 0} max={latestSol} photoCount={solPhotoCount} on:change={handleSol} />
 
       <CameraSelector
         cameras={['All', ...cameras.map(c => cameraDisplayName(c))]}

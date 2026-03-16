@@ -4,6 +4,7 @@
   export let min = 0
   export let max = 1850
   export let value = 0
+  export let photoCount = null
 
   const dispatch = createEventDispatcher()
   let timer = null
@@ -39,7 +40,7 @@
 
 <div class="sol-slider">
   <label>
-    <span class="label-text" title="A sol is one Martian day (~24h 37m)">Sol (Mars day)</span>
+    <span class="label-text" title="A sol is one Martian day (~24h 37m)">Sol {localValue}{#if photoCount != null} <span class="photo-count">({photoCount} photo{photoCount !== 1 ? 's' : ''})</span>{/if}</span>
     <input
       type="range"
       {min}
@@ -71,6 +72,13 @@
     font-weight: 600;
     font-size: 14px;
     min-width: 80px;
+    white-space: nowrap;
+  }
+
+  .photo-count {
+    font-weight: 400;
+    color: var(--text-dim);
+    font-size: 12px;
   }
 
   input[type="range"] {
