@@ -62,6 +62,53 @@ function normalizePhoto(item) {
   }
 }
 
+function extractSol(text) {
+  const match = text?.match(/sol[\s,]+(\d[\d,]*)/i)
+  if (!match) return null
+  return parseInt(match[1].replace(/,/g, ''))
+}
+
+function normalizeLegacyPhoto(item) {
+  const data = item.data?.[0] || {}
+  const link = item.links?.find(l => l.rel === 'preview') || item.links?.[0]
+  return {
+    id: data.nasa_id || '',
+    sol: extractSol(data.description),
+    img_src: link?.href || '',
+    earth_date: data.date_created?.split('T')[0] || '',
+    camera: {
+      id: '',
+      full_name: data.title || 'Unknown',
+    },
+  }
+}
+
+export async function fetchLegacyPhotos({ rover, page = 1, num = 25 } = {}) {
+  const cacheKey = `legacy_${rover}_${page}`
+  const cached = getCache(cacheKey, CACHE_TTL)
+  if (cached) return cached
+
+  const params = new URLSearchParams({
+    q: `${rover} rover mars`,
+    media_type: 'image',
+    page: String(page),
+    page_size: String(num),
+  })
+
+  const res = await fetch(`https://images-api.nasa.gov/search?${params}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  const json = await res.json()
+
+  const items = json.collection?.items || []
+  const result = {
+    photos: items.map(normalizeLegacyPhoto).filter(p => p.img_src),
+    total: json.collection?.metadata?.total_hits || 0,
+  }
+
+  setCache(cacheKey, result)
+  return result
+}
+
 export async function fetchPhotos({ sol, camera, num = 25, page = 1 } = {}) {
   const cacheKey = `rss_${sol ?? 'latest'}_${camera || 'all'}_${page}`
   const cached = getCache(cacheKey, CACHE_TTL)

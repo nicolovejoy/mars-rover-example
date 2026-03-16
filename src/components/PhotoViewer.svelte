@@ -108,9 +108,9 @@
 
   {#if photo}
     <div class="metadata">
-      <span>Sol {photo.sol}</span>
+      {#if photo.sol != null}<span>Sol {photo.sol}</span>{/if}
       <span>{photo.earth_date}</span>
-      <span>{photo.camera.full_name}</span>
+      <span class="photo-title">{photo.camera.full_name}</span>
       <span class="photo-id">ID {photo.id}</span>
     </div>
   {/if}

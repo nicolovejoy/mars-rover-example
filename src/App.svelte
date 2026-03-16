@@ -1,10 +1,12 @@
 <script>
   import { onMount } from 'svelte'
-  import { fetchPhotos, cameraDisplayName } from './lib/api.js'
+  import { fetchPhotos, fetchLegacyPhotos, cameraDisplayName } from './lib/api.js'
+  import RoverSelector from './components/RoverSelector.svelte'
   import SolSlider from './components/SolSlider.svelte'
   import CameraSelector from './components/CameraSelector.svelte'
   import PhotoViewer from './components/PhotoViewer.svelte'
 
+  let rover = 'perseverance'
   let sol = null
   let camera = ''
   let photos = []
@@ -15,28 +17,33 @@
   let total = 0
   const perPage = 25
 
+  $: isPerseverance = rover === 'perseverance'
   $: totalPages = Math.ceil(total / perPage) || 1
 
-  onMount(() => loadPhotos())
+  onMount(() => load())
 
-  async function loadPhotos() {
+  async function load() {
     error = ''
     loading = true
     try {
-      const result = await fetchPhotos({
-        sol: sol ?? undefined,
-        camera: camera || undefined,
-        page,
-      })
-      photos = result.photos
-      total = result.total
-      // Derive available cameras from results (only when showing all)
-      if (!camera) {
-        cameras = [...new Set(photos.map(p => p.camera.id))]
-      }
-      // If we fetched "latest", read the actual sol from results
-      if (sol === null && photos.length > 0) {
-        sol = photos[0].sol
+      if (isPerseverance) {
+        const result = await fetchPhotos({
+          sol: sol ?? undefined,
+          camera: camera || undefined,
+          page,
+        })
+        photos = result.photos
+        total = result.total
+        if (!camera) {
+          cameras = [...new Set(photos.map(p => p.camera.id))]
+        }
+        if (sol === null && photos.length > 0) {
+          sol = photos[0].sol
+        }
+      } else {
+        const result = await fetchLegacyPhotos({ rover, page })
+        photos = result.photos
+        total = result.total
       }
     } catch (e) {
       error = e.message
@@ -45,11 +52,20 @@
     loading = false
   }
 
+  function handleRover(e) {
+    rover = e.detail
+    sol = null
+    camera = ''
+    cameras = []
+    page = 1
+    load()
+  }
+
   function handleSol(e) {
     sol = e.detail
     camera = ''
     page = 1
-    loadPhotos()
+    load()
   }
 
   function handleCamera(e) {
@@ -60,15 +76,15 @@
       camera = cameras.find(c => cameraDisplayName(c) === name) || ''
     }
     page = 1
-    loadPhotos()
+    load()
   }
 
   function prevPage() {
-    if (page > 1) { page--; loadPhotos() }
+    if (page > 1) { page--; load() }
   }
 
   function nextPage() {
-    if (page < totalPages) { page++; loadPhotos() }
+    if (page < totalPages) { page++; load() }
   }
 </script>
 
@@ -82,13 +98,17 @@
       <div class="error">{error}</div>
     {/if}
 
-    <SolSlider value={sol ?? 0} on:change={handleSol} />
+    <RoverSelector selected={rover} on:select={handleRover} />
 
-    <CameraSelector
-      cameras={['All', ...cameras.map(c => cameraDisplayName(c))]}
-      selected={camera ? cameraDisplayName(camera) : 'All'}
-      on:select={handleCamera}
-    />
+    {#if isPerseverance}
+      <SolSlider value={sol ?? 0} on:change={handleSol} />
+
+      <CameraSelector
+        cameras={['All', ...cameras.map(c => cameraDisplayName(c))]}
+        selected={camera ? cameraDisplayName(camera) : 'All'}
+        on:select={handleCamera}
+      />
+    {/if}
 
     {#if total > perPage}
       <div class="pagination">
