@@ -1,5 +1,5 @@
 <script>
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, beforeUpdate } from 'svelte'
 
   export let photos = []
   export let loading = false
@@ -17,17 +17,21 @@
   ]
   let visibleMessages = 0
   let messageTimer = null
+  let prevLoading = false
 
-  $: if (loading) {
-    visibleMessages = 1
-    clearInterval(messageTimer)
-    messageTimer = setInterval(() => {
-      visibleMessages = visibleMessages + 1
-      if (visibleMessages >= loadingMessages.length) clearInterval(messageTimer)
-    }, 1500)
-  } else {
-    clearInterval(messageTimer)
-  }
+  beforeUpdate(() => {
+    if (loading && !prevLoading) {
+      visibleMessages = 1
+      clearInterval(messageTimer)
+      messageTimer = setInterval(() => {
+        visibleMessages = visibleMessages + 1
+        if (visibleMessages >= loadingMessages.length) clearInterval(messageTimer)
+      }, 1500)
+    } else if (!loading && prevLoading) {
+      clearInterval(messageTimer)
+    }
+    prevLoading = loading
+  })
   let slotA = { src: '', opacity: 1 }
   let slotB = { src: '', opacity: 0 }
   let activeSlot = 'A'
@@ -85,7 +89,7 @@
     </div>
   {:else if total === 0}
     <div class="crossfade-container">
-      <div class="empty-state">No photos for this sol + camera</div>
+      <div class="empty-state">No photos on this sol. Try sliding to a nearby day.</div>
     </div>
   {:else}
     <div class="crossfade-container">

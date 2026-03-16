@@ -39,7 +39,7 @@
 
 <div class="sol-slider">
   <label>
-    <span class="label-text">Sol</span>
+    <span class="label-text" title="A sol is one Martian day (~24h 37m)">Sol</span>
     <input
       type="range"
       {min}
