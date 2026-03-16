@@ -8,8 +8,10 @@
   const dispatch = createEventDispatcher()
   let timer = null
   let localValue = value
+  let prevValue = value
 
-  $: if (value !== localValue) {
+  $: if (value !== prevValue) {
+    prevValue = value
     localValue = value
   }
 

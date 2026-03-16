@@ -22,7 +22,7 @@
     visibleMessages = 1
     clearInterval(messageTimer)
     messageTimer = setInterval(() => {
-      visibleMessages++
+      visibleMessages = visibleMessages + 1
       if (visibleMessages >= loadingMessages.length) clearInterval(messageTimer)
     }, 1500)
   } else {
