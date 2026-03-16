@@ -24,14 +24,40 @@ function setCache(key, data) {
   }
 }
 
+const CAMERA_NAMES = {
+  MCZ_LEFT: 'Mastcam-Z Left',
+  MCZ_RIGHT: 'Mastcam-Z Right',
+  NAVCAM_LEFT: 'Nav Cam Left',
+  NAVCAM_RIGHT: 'Nav Cam Right',
+  FRONT_HAZCAM_LEFT_A: 'Front Hazard Cam Left',
+  FRONT_HAZCAM_RIGHT_A: 'Front Hazard Cam Right',
+  REAR_HAZCAM_LEFT: 'Rear Hazard Cam Left',
+  REAR_HAZCAM_RIGHT: 'Rear Hazard Cam Right',
+  SKYCAM: 'Sky Cam',
+  SHERLOC_WATSON: 'WATSON (SHERLOC)',
+  SUPERCAM_RMI: 'SuperCam RMI',
+  EDL_DDCAM: 'Descent Cam',
+  EDL_PUCAM1: 'Parachute Up Cam 1',
+  EDL_PUCAM2: 'Parachute Up Cam 2',
+  EDL_RUCAM: 'Rover Up Cam',
+  EDL_RDCAM: 'Rover Down Cam',
+  LCAM: 'Lander Cam',
+}
+
+export function cameraDisplayName(code) {
+  return CAMERA_NAMES[code] || code
+}
+
 function normalizePhoto(item) {
+  const code = item.camera?.instrument || 'Unknown'
   return {
     id: item.imageid,
     sol: item.sol,
     img_src: item.image_files?.medium || item.image_files?.full_res,
     earth_date: item.date_taken_utc?.split('T')[0] || '',
     camera: {
-      full_name: item.camera?.instrument || 'Unknown',
+      id: code,
+      full_name: cameraDisplayName(code),
     },
   }
 }

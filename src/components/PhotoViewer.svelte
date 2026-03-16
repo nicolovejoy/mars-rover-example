@@ -10,9 +10,9 @@
 
   // Staggered loading messages
   const loadingMessages = [
-    'Connecting to Mars...',
-    'Querying NASA\'s raw image feed from Perseverance rover.',
-    'Each photo is beamed back from ~140 million miles away.',
+    'Connecting to NASA\'s image archive...',
+    'Searching Perseverance rover photos...',
+    'The rover has been exploring Mars since February 2021.',
     'Almost there...',
   ]
   let visibleMessages = 0

@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte'
-  import { fetchPhotos } from './lib/api.js'
+  import { fetchPhotos, cameraDisplayName } from './lib/api.js'
   import SolSlider from './components/SolSlider.svelte'
   import CameraSelector from './components/CameraSelector.svelte'
   import PhotoViewer from './components/PhotoViewer.svelte'
@@ -25,7 +25,7 @@
       photos = result.photos
       // Derive available cameras from results (only when showing all)
       if (!camera) {
-        cameras = [...new Set(photos.map(p => p.camera.full_name))]
+        cameras = [...new Set(photos.map(p => p.camera.id))]
       }
       // If we fetched "latest", read the actual sol from results
       if (sol === null && photos.length > 0) {
@@ -45,7 +45,12 @@
   }
 
   function handleCamera(e) {
-    camera = e.detail === 'All' ? '' : e.detail
+    const name = e.detail
+    if (name === 'All') {
+      camera = ''
+    } else {
+      camera = cameras.find(c => cameraDisplayName(c) === name) || ''
+    }
     loadPhotos()
   }
 </script>
@@ -63,8 +68,8 @@
     <SolSlider value={sol ?? 0} on:change={handleSol} />
 
     <CameraSelector
-      cameras={['All', ...cameras]}
-      selected={camera || 'All'}
+      cameras={['All', ...cameras.map(c => cameraDisplayName(c))]}
+      selected={camera ? cameraDisplayName(camera) : 'All'}
       on:select={handleCamera}
     />
   </div>
@@ -74,7 +79,7 @@
   .app {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: 100dvh;
     width: 100vw;
     overflow: hidden;
   }
